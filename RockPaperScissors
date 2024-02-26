@@ -1,0 +1,144 @@
+import random
+TITLE = "rock scissor paper"
+WIDTH = 500
+HEIGHT = 500
+
+game = Actor
+game.wincount = 0
+game.lostcount = 0
+game.stage = 0
+game.round = 1
+game.tie = False
+
+opponent = Actor ("questionmark", (400, 300))
+opponent.visible = True
+
+moves = []
+moves.append (Actor ("s0", (150, 200)))    # rock
+moves.append (Actor ("d1", (150, 300)))    # scissors
+moves.append (Actor ("d2", (150, 400)))    # paper
+
+usermove = 0    # 0: rock, 1: scissors, 2: paper
+
+
+# each move has defualt and select image
+for i in range (0, 3):
+    moves[i].selectedimage = "s"+str(i)
+    moves[i].defaultimage = "d"+str(i)
+
+
+def draw():
+    screen.clear ()
+    screen.draw.text("Round "+str(game.round)+"/3", (100,100), fontsize=30)
+    screen.draw.text("Won round: "+str(game.wincount), (300,90), fontsize=30)
+    screen.draw.text("Lost round: "+str(game.lostcount), (300,110), fontsize=30)
+
+    if game.stage == 0 :    # game start
+
+        opponent.draw()
+        for move in moves :
+            move.draw()
+        screen.draw.text("Choose a move", (120, 50), fontsize = 50)
+        screen.draw.text("VS", (250,250), fontsize=70)
+
+    elif game.stage == 1 :  # during match
+
+        opponent.draw()     # reveal opponent move
+        moves[usermove].draw()
+        screen.draw.text("VS", (250,250), fontsize=70)
+
+    elif game.stage == 2 :  # game end, display result
+
+        if game.wincount >= 2 :
+            result = "Win"
+        else :
+            result = "Lose"
+
+        screen.draw.text(result, (200,200), fontsize=70)
+        screen.draw.text("Press enter to restart", (100, 250), fontsize=50)
+
+
+def updateselection (update):
+    global usermove
+    # reset previous image from selected to default
+    moves[usermove].image = moves[usermove].defaultimage
+
+    # special cases
+    if usermove + update < 0 :
+        usermove = 2
+    elif usermove + update > 2 :
+        usermove = 0
+    else :
+        usermove += update
+
+    # image of the selected move return selected
+    moves[usermove].image = moves[usermove].selectedimage
+
+
+def on_key_down (key):
+    if game.stage == 0:
+        if key == keys.UP :
+            updateselection (-1)
+        elif key == keys.DOWN:
+            updateselection (1)
+
+        # select a move and proceed to match result
+        elif key == keys.RETURN:
+            game.stage = 1
+            updatematch()
+
+    # game restart
+    elif game.stage == 2:
+        if key == keys.RETURN:
+            resetgame()
+
+
+def resetgame():
+    game.round = 1
+    game.wincount = 0
+    game.lostcount = 0
+    game.stage = 0
+
+
+# decide the match result
+def updatematch ():
+    global usermove
+    # random opponent move
+    oppmove = random.randint (0, 2)
+    # reusing move option images
+    opponent.image = "d"+str(oppmove)
+
+    # tie
+    if oppmove == usermove :
+        game.tie = True
+    # opponent rock; user paper
+    elif oppmove == 0 and usermove == 2:
+        game.wincount += 1
+    # opponent scissors; user rock
+    elif oppmove == 1 and usermove == 0:
+        game.wincount += 1
+    # opponent paper; user scissors
+    elif oppmove == 2 and usermove == 1:
+        game.wincount += 1
+    else :
+        game.lostcount += 1
+
+    clock.schedule (resetstage, 1.5)
+
+
+def resetstage():
+    game.stage = 0
+
+    if not game.tie :
+        game.round += 1
+
+    game.tie = False
+
+    # reset opponent image
+    opponent.image = "questionmark"
+
+
+# change stage when round 3 is over
+def update():
+    if game.round > 3:
+        game.stage = 2
